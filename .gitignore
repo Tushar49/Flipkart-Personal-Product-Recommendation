@@ -160,3 +160,16 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 recommend_env/pyvenv.cfg
+recommend_env/Scripts/surprise.exe
+recommend_env/Scripts/surprise-script.py
+recommend_env/Scripts/pythonw.exe
+recommend_env/Scripts/python.exe
+recommend_env/Scripts/pip3.exe
+recommend_env/Scripts/pip3.10.exe
+recommend_env/Scripts/pip.exe
+recommend_env/Scripts/f2py.exe
+recommend_env/Scripts/deactivate.bat
+recommend_env/Scripts/flask.exe
+recommend_env/Scripts/Activate.ps1
+recommend_env/Scripts/activate.bat
+recommend_env/Scripts/activate
