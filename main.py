@@ -12,5 +12,5 @@ print(f"RMSE: {rmse}")
 
 # Get top 10 recommendations for a user
 top_n_recommendations = model.get_top_n_recommendations(predictions, n=10)
-user_id = 'A1XXXXXX'
+user_id = 'A2A2WZYLU528RO'
 print(top_n_recommendations.get(user_id, []))
