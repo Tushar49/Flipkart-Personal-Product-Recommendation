@@ -5,11 +5,8 @@ def load_data(filepath):
     # Load the dataset into a pandas dataframe
     df = pd.read_json(filepath, lines=True)
     
-    # Handle missing values: Drop rows with missing values in the columns of interest
+    # Drop rows with missing values in the columns of interest
     df = df.dropna(subset=['reviewerID', 'asin', 'overall'])
-    
-    # Handle outliers: We'll cap the ratings at 1-5 in case there are any errors
-    df['overall'] = df['overall'].clip(1, 5)
     
     # Keep only necessary columns and rename them
     data_df = df[['reviewerID', 'asin', 'overall']].rename(columns={
