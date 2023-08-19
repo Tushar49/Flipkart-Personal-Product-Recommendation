@@ -173,3 +173,4 @@ recommend_env/Scripts/flask.exe
 recommend_env/Scripts/Activate.ps1
 recommend_env/Scripts/activate.bat
 recommend_env/Scripts/activate
+data/raw/Clothing_Shoes_and_Jewelry_5.json
