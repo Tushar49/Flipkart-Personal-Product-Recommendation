@@ -4,7 +4,6 @@ import json
 import ast
 import itertools
 
-
 def load_data(filepath):
     # Load the dataset into a pandas dataframe
     df = pd.read_json(filepath, lines=True)
@@ -29,7 +28,6 @@ def load_data(filepath):
     data = Dataset.load_from_df(data_df, reader)
     return data
 
-
 def load_data_with_metadata(review_filepath, metadata_filepath):
     # Load the review dataset
     review_df = pd.read_json(review_filepath, lines=True, encoding='utf-8')
@@ -53,6 +51,13 @@ def load_data_with_metadata(review_filepath, metadata_filepath):
     # Merge the two datasets on the 'asin' index
     merged_df = pd.merge(review_df, metadata_df, left_index=True, right_index=True, how="inner")
     
-    # ... rest of the code remains unchanged ...
-
+    # Generate the data variable using the merged_df
+    data_df = merged_df[['reviewerID', 'asin', 'overall']].rename(columns={
+        'reviewerID': 'ReviewerID',
+        'asin': 'ASIN',
+        'overall': 'Score'
+    })
+    reader = Reader(rating_scale=(1, 5))
+    data = Dataset.load_from_df(data_df, reader)
+    
     return data, merged_df  # Return both the data in Surprise format and the merged dataframe
