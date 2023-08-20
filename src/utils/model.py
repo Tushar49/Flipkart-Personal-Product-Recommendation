@@ -1,3 +1,5 @@
+import os
+import pickle
 
 from surprise import SVD, KNNBasic, KNNWithMeans, KNNWithZScore, NMF, NormalPredictor, CoClustering
 from surprise.model_selection import GridSearchCV, train_test_split
@@ -5,6 +7,12 @@ from surprise import accuracy
 
 def train_model(data):
     # Split the data into training and test sets
+
+    # Check if a saved model exists
+    if os.path.exists('saved_model.pkl'):
+        with open('saved_model.pkl', 'rb') as file:
+            algorithm = pickle.load(file)
+        return algorithm, testset
     trainset, testset = train_test_split(data, test_size=0.25)
     
     # Define a list of algorithms to try
@@ -19,11 +27,16 @@ def train_model(data):
     gs = GridSearchCV(SVD, param_grid, measures=['rmse', 'mae'], cv=3)
     gs.fit(data)
     
+
+    # Save the trained model
+
     # Best algorithm and parameters
     best_algorithm = gs.best_estimator['rmse']
     
     # Train the model
     best_algorithm.fit(trainset)
+    with open('saved_model.pkl', 'wb') as file:
+        pickle.dump(best_algorithm, file)
     return best_algorithm, testset
 
 # def evaluate_model(algorithm, testset):
