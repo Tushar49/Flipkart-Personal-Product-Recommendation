@@ -1,11 +1,11 @@
 from surprise import Dataset, Reader
-import pandas as pd
+import dask.dataframe as dd
 import json
 import ast
 
 def load_data(filepath):
     # Load the dataset into a pandas dataframe
-    df = pd.read_json(filepath, lines=True)
+    df = dd.read_json(filepath, lines=True)
     
     # Handle missing values: Drop rows with missing values in the columns of interest
     df = df.dropna(subset=['reviewerID', 'asin', 'overall'])
@@ -32,12 +32,12 @@ import json
 
 def load_data_with_metadata(review_filepath, metadata_filepath):
     # Load the review dataset
-    review_df = pd.read_json(review_filepath, lines=True, encoding='utf-8')
+    review_df = dd.read_json(review_filepath, lines=True, encoding='utf-8')
     
     # Load the product metadata using the robust method
-    with open(metadata_filepath, 'r', encoding='utf-8') as file:
-        metadata_list = [ast.literal_eval(line) for line in file]
-    metadata_df = pd.DataFrame(metadata_list)
+    
+metadata_df = dd.read_json(metadata_filepath, lines=True, encoding='utf-8')
+
     
     # Merge the two datasets on the 'asin' column
     merged_df = pd.merge(review_df, metadata_df, on="asin", how="inner")
@@ -60,3 +60,14 @@ def load_data_with_metadata(review_filepath, metadata_filepath):
     data = Dataset.load_from_df(data_df, reader)
     
     return data, merged_df  # Return both the data in Surprise format and the merged dataframe
+
+def downcast_dtypes(df):
+    # Downcast numeric types
+    df = df.apply(dd.to_numeric, downcast='float').apply(dd.to_numeric, downcast='unsigned')
+    
+    # Downcast objects to category if number of unique values is less than half the length of the column
+    for col in df.select_dtypes(include=['object']).columns:
+        if len(df[col].unique().compute()) / len(df[col]) < 0.5:
+            df[col] = df[col].astype('category')
+    
+    return df

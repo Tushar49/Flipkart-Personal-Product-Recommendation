@@ -19,11 +19,13 @@ def train_model(data):
     algorithms = [SVD(), KNNBasic(), KNNWithMeans(), KNNWithZScore(), NMF(), NormalPredictor(), CoClustering()]
     
     # Hyperparameter tuning (for the sake of simplicity, we'll only do this for SVD here)
-    param_grid = {
-        'n_epochs': [5, 10, 20],
-        'lr_all': [0.002, 0.005],
-        'reg_all': [0.2, 0.4, 0.6]
-    }
+    
+param_grid = {
+    'n_epochs': [10, 20],
+    'lr_all': [0.005],
+    'reg_all': [0.2, 0.4]
+}
+
     gs = GridSearchCV(SVD, param_grid, measures=['rmse', 'mae'], cv=3)
     gs.fit(data)
     
