@@ -33,30 +33,26 @@ import json
 def load_data_with_metadata(review_filepath, metadata_filepath):
     # Load the review dataset
     review_df = pd.read_json(review_filepath, lines=True, encoding='utf-8')
+    review_df.set_index('asin', inplace=True)  # Index on 'asin' for efficient merge
     
-    # Load the product metadata using the robust method
+    # Initialize an empty list to collect chunks of metadata
+    metadata_list = []
+    
+    # Read and process the metadata file in chunks
+    chunk_size = 50000  # Adjust based on available memory
     with open(metadata_filepath, 'r', encoding='utf-8') as file:
-        metadata_list = [ast.literal_eval(line) for line in file]
-    metadata_df = pd.DataFrame(metadata_list)
-    
-    # Merge the two datasets on the 'asin' column
-    merged_df = pd.merge(review_df, metadata_df, on="asin", how="inner")
-    
-    # Handle missing values and outliers for the review data
-    merged_df = merged_df.dropna(subset=['reviewerID', 'asin', 'overall'])
-    merged_df['overall'] = merged_df['overall'].clip(1, 5)
-    
-    # Keep only necessary columns and rename them for the surprise library
-    data_df = merged_df[['reviewerID', 'asin', 'overall']].rename(columns={
-        'reviewerID': 'ReviewerID',
-        'asin': 'ASIN',
-        'overall': 'Score'
-    })
+        while chunk := list(itertools.islice(file, chunk_size)):
+            chunk_data = [ast.literal_eval(line) for line in chunk]
+            metadata_chunk_df = pd.DataFrame(chunk_data)
+            metadata_chunk_df.set_index('asin', inplace=True)  # Index on 'asin'
+            metadata_list.append(metadata_chunk_df)
 
-    # Define a Reader. The rating scale is from 1 to 5.
-    reader = Reader(rating_scale=(1, 5))
+    # Concatenate all chunks into a single DataFrame
+    metadata_df = pd.concat(metadata_list)
 
-    # Load the data from the dataframe into Surprise's format
-    data = Dataset.load_from_df(data_df, reader)
+    # Merge the two datasets on the 'asin' index
+    merged_df = pd.merge(review_df, metadata_df, left_index=True, right_index=True, how="inner")
     
+    # ... rest of the code remains unchanged ...
+
     return data, merged_df  # Return both the data in Surprise format and the merged dataframe
