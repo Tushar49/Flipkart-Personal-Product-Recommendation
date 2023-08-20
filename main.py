@@ -1,7 +1,7 @@
 from src.utils import data_loader, model
 
 # Load data
-data = data_loader.load_data("data/raw/Clothing_Shoes_and_Jewelry_5.json")
+data, merged_df = data_loader.load_data_with_metadata("data/raw/Clothing_Shoes_and_Jewelry_5.json", "data/raw/meta_Clothing_Shoes_and_Jewelry.json")
 
 # Train model
 algorithm, testset = model.train_model(data)
