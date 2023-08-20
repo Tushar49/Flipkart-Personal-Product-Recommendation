@@ -3,6 +3,8 @@ import pandas as pd
 import json
 import ast
 import itertools
+import gc
+
 
 def load_data(filepath):
     # Load the dataset into a pandas dataframe
@@ -28,42 +30,59 @@ def load_data(filepath):
     data = Dataset.load_from_df(data_df, reader)
     return data
 
+
 def load_data_with_metadata(review_filepath, metadata_filepath):
-    # Load the review dataset
-    review_df = pd.read_json(review_filepath, lines=True, encoding='utf-8')
-    review_df.set_index('asin', inplace=True)  # Index on 'asin' for efficient merge
-    
-    # Initialize an empty list to collect chunks of metadata
-    metadata_list = []
-    
-    # Read and process the metadata file in chunks
-    chunk_size = 50000  # Adjust based on available memory
-    with open(metadata_filepath, 'r', encoding='utf-8') as file:
-        while chunk := list(itertools.islice(file, chunk_size)):
-            chunk_data = [ast.literal_eval(line) for line in chunk]
-            metadata_chunk_df = pd.DataFrame(chunk_data)
-            metadata_chunk_df.set_index('asin', inplace=True)  # Index on 'asin'
-            metadata_list.append(metadata_chunk_df)
-
-    # Concatenate all chunks into a single DataFrame
-    metadata_df = pd.concat(metadata_list)
-
-    # Merge the two datasets on the 'asin' index
-    merged_df = pd.merge(review_df, metadata_df, left_index=True, right_index=True, how="inner")
-    
-    # Generate the data variable using the merged_df
-    # data_df = merged_df[['reviewerID', 'asin', 'overall']].rename(columns={
-    #     'reviewerID': 'ReviewerID',
-    #     'asin': 'ASIN',
-    #     'overall': 'Score'
-    # })
-    data_df = merged_df.reset_index()[['reviewerID', 'asin', 'overall']].rename(columns={
-    'reviewerID': 'uid',
-    'asin': 'iid',
-    'overall': 'rating'
-    })
-
+    # Define a Reader. The rating scale is from 1 to 5 in the dataset.
     reader = Reader(rating_scale=(1, 5))
+
+    # Adjust chunk size based on available memory
+    review_chunk_size = 20000
+    metadata_chunk_size = 10000
+
+    # Lists to collect chunks
+    all_data_chunks = []
+    all_metadata_chunks = []
+
+    # Process review data in chunks
+    review_chunk_iter = pd.read_json(review_filepath, lines=True, chunksize=review_chunk_size, encoding='utf-8')
+    for review_chunk in review_chunk_iter:
+        review_chunk.set_index('asin', inplace=True)  # Index on 'asin' for efficient merge
+
+        # Read and process the metadata file in chunks
+        with open(metadata_filepath, 'r', encoding='utf-8') as file:
+            for chunk in itertools.islice(file, metadata_chunk_size):
+                chunk_data = ast.literal_eval(chunk)
+                metadata_chunk = pd.DataFrame([chunk_data])
+                metadata_chunk.set_index('asin', inplace=True)  # Index on 'asin'
+                
+                # Merge with review chunk
+                merged_chunk = pd.merge(review_chunk, metadata_chunk, left_index=True, right_index=True, how="inner")
+                merged_chunk_reset = merged_chunk.reset_index()
+
+                # Append to lists
+                all_data_chunks.append(merged_chunk_reset[['reviewerID', 'asin', 'overall']])
+                all_metadata_chunks.append(merged_chunk_reset)
+                
+                # # Merge with review chunk
+                # merged_chunk = pd.merge(review_chunk, metadata_chunk, left_index=True, right_index=True, how="inner")
+                
+                # # Append to lists
+                # all_data_chunks.append(merged_chunk[['reviewerID', 'asin', 'overall']])
+                # all_metadata_chunks.append(merged_chunk)
+
+                # Explicitly release memory
+                del metadata_chunk
+                gc.collect()
+
+        # Explicitly release memory
+        del review_chunk
+        gc.collect()
+
+    # Concatenate chunks
+    data_df = pd.concat(all_data_chunks)
+    merged_df = pd.concat(all_metadata_chunks)
+
+    # Load the data into Surprise's format
     data = Dataset.load_from_df(data_df, reader)
     
-    return data, merged_df  # Return both the data in Surprise format and the merged dataframe
+    return data, merged_df
