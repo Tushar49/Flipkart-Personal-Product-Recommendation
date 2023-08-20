@@ -7,7 +7,7 @@ data = data_loader.load_data("data/raw/Clothing_Shoes_and_Jewelry_5.json")
 algorithm, testset = model.train_model(data)
 
 # Evaluate model
-rmse, predictions = model.evaluate_model(algorithm, testset)
+rmse, precision, recall, predictions = model.evaluate_model(algorithm, testset)
 print(f"RMSE: {rmse}")
 
 # Get top 10 recommendations for a user
