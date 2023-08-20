@@ -36,8 +36,8 @@ def load_data_with_metadata(review_filepath, metadata_filepath):
     reader = Reader(rating_scale=(1, 5))
 
     # Adjust chunk size based on available memory
-    review_chunk_size = 20000
-    metadata_chunk_size = 10000
+    review_chunk_size = 1000000
+    metadata_chunk_size = 2000000
 
     # Lists to collect chunks
     all_data_chunks = []
