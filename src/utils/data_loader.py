@@ -2,6 +2,8 @@ from surprise import Dataset, Reader
 import pandas as pd
 import json
 import ast
+import itertools
+
 
 def load_data(filepath):
     # Load the dataset into a pandas dataframe
@@ -27,8 +29,6 @@ def load_data(filepath):
     data = Dataset.load_from_df(data_df, reader)
     return data
 
-
-import json
 
 def load_data_with_metadata(review_filepath, metadata_filepath):
     # Load the review dataset
