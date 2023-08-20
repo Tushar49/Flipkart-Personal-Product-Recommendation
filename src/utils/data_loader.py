@@ -1,73 +1,49 @@
-from surprise import Dataset, Reader
+import ast
 import dask.dataframe as dd
 import json
-import ast
+import pandas as pd
 
-def load_data(filepath):
-    # Load the dataset into a pandas dataframe
-    df = dd.read_json(filepath, lines=True)
+def convert_to_valid_json(json_string):
+    """Convert a JSON string with single quotes to one with double quotes."""
+    return json_string.replace('\'', '\"')
+
+def load_metadata_in_chunks_improved(filepath, chunksize=50000):
+    chunks = []
+    error_lines = []
+    line_number = 0
     
-    # Handle missing values: Drop rows with missing values in the columns of interest
-    df = df.dropna(subset=['reviewerID', 'asin', 'overall'])
+    with open(filepath, 'r') as file:
+        lines = []
+        for line in file:
+            line_number += 1
+            try:
+                # Attempt to parse the line using ast.literal_eval
+                parsed_line = ast.literal_eval(line)
+                valid_json_line = json.dumps(parsed_line)
+                lines.append(valid_json_line)
+                if len(lines) == chunksize:
+                    valid_chunk = dd.from_pandas(pd.read_json('\n'.join(lines), lines=True), npartitions=1)
+                    chunks.append(valid_chunk)
+                    lines.clear()
+            except Exception:
+                error_lines.append(line_number)
+
+        # Handle the last chunk if it exists
+        if lines:
+            valid_chunk = dd.from_pandas(pd.read_json('\n'.join(lines), lines=True), npartitions=1)
+            chunks.append(valid_chunk)
     
-    # Handle outliers: We'll cap the ratings at 1-5 in case there are any errors
-    df['overall'] = df['overall'].clip(1, 5)
-    
-    # Keep only necessary columns and rename them
-    data_df = df[['reviewerID', 'asin', 'overall']].rename(columns={
-        'reviewerID': 'ReviewerID',
-        'asin': 'ASIN',
-        'overall': 'Score'
-    })
-
-    # Define a Reader. The rating scale is from 1 to 5 in the dataset.
-    reader = Reader(rating_scale=(1, 5))
-
-    # Load the data from the dataframe into Surprise's format
-    data = Dataset.load_from_df(data_df, reader)
-    return data
-
-
-import json
+    if error_lines:
+        print(f"Skipped lines due to errors: {error_lines}")
+        
+    return dd.concat(chunks, interleave_partitions=True)
 
 def load_data_with_metadata(review_filepath, metadata_filepath):
-    # Load the review dataset
+    # Load the review data
     review_df = dd.read_json(review_filepath, lines=True, encoding='utf-8')
-    
-    # Load the product metadata using the robust method
-    
-metadata_df = dd.read_json(metadata_filepath, lines=True, encoding='utf-8')
-
-    
-    # Merge the two datasets on the 'asin' column
-    merged_df = pd.merge(review_df, metadata_df, on="asin", how="inner")
-    
-    # Handle missing values and outliers for the review data
-    merged_df = merged_df.dropna(subset=['reviewerID', 'asin', 'overall'])
-    merged_df['overall'] = merged_df['overall'].clip(1, 5)
-    
-    # Keep only necessary columns and rename them for the surprise library
-    data_df = merged_df[['reviewerID', 'asin', 'overall']].rename(columns={
-        'reviewerID': 'ReviewerID',
-        'asin': 'ASIN',
-        'overall': 'Score'
-    })
-
-    # Define a Reader. The rating scale is from 1 to 5.
-    reader = Reader(rating_scale=(1, 5))
-
-    # Load the data from the dataframe into Surprise's format
-    data = Dataset.load_from_df(data_df, reader)
-    
-    return data, merged_df  # Return both the data in Surprise format and the merged dataframe
-
-def downcast_dtypes(df):
-    # Downcast numeric types
-    df = df.apply(dd.to_numeric, downcast='float').apply(dd.to_numeric, downcast='unsigned')
-    
-    # Downcast objects to category if number of unique values is less than half the length of the column
-    for col in df.select_dtypes(include=['object']).columns:
-        if len(df[col].unique().compute()) / len(df[col]) < 0.5:
-            df[col] = df[col].astype('category')
-    
-    return df
+    # Load the metadata
+    metadata_df = load_metadata_in_chunks_improved(metadata_filepath)
+    # Merge the datasets
+    merged_df = dd.merge(review_df, metadata_df, on="asin", how="inner")
+    # Return the datasets
+    return review_df, merged_df
