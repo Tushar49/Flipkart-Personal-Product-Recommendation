@@ -52,11 +52,17 @@ def load_data_with_metadata(review_filepath, metadata_filepath):
     merged_df = pd.merge(review_df, metadata_df, left_index=True, right_index=True, how="inner")
     
     # Generate the data variable using the merged_df
-    data_df = merged_df[['reviewerID', 'asin', 'overall']].rename(columns={
-        'reviewerID': 'ReviewerID',
-        'asin': 'ASIN',
-        'overall': 'Score'
+    # data_df = merged_df[['reviewerID', 'asin', 'overall']].rename(columns={
+    #     'reviewerID': 'ReviewerID',
+    #     'asin': 'ASIN',
+    #     'overall': 'Score'
+    # })
+    data_df = merged_df.reset_index()[['reviewerID', 'asin', 'overall']].rename(columns={
+    'reviewerID': 'uid',
+    'asin': 'iid',
+    'overall': 'rating'
     })
+
     reader = Reader(rating_scale=(1, 5))
     data = Dataset.load_from_df(data_df, reader)
     
