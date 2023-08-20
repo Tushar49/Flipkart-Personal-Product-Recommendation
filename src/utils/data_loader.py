@@ -1,5 +1,7 @@
 from surprise import Dataset, Reader
 import pandas as pd
+import json
+import ast
 
 def load_data(filepath):
     # Load the dataset into a pandas dataframe
@@ -26,15 +28,16 @@ def load_data(filepath):
     return data
 
 
+import json
+
 def load_data_with_metadata(review_filepath, metadata_filepath):
     # Load the review dataset
     review_df = pd.read_json(review_filepath, lines=True, encoding='utf-8')
     
-    # Load the product metadata
-    # metadata_df = pd.read_json(metadata_filepath, lines=True, encoding='utf-8')
-    with open(filepath, 'r', encoding='utf-8') as file:
-        metadata_df = [json.loads(line) for line in file]
-    # return pd.DataFrame(data)
+    # Load the product metadata using the robust method
+    with open(metadata_filepath, 'r', encoding='utf-8') as file:
+        metadata_list = [ast.literal_eval(line) for line in file]
+    metadata_df = pd.DataFrame(metadata_list)
     
     # Merge the two datasets on the 'asin' column
     merged_df = pd.merge(review_df, metadata_df, on="asin", how="inner")
